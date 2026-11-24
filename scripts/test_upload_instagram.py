@@ -48,10 +48,18 @@ with tempfile.TemporaryDirectory() as d:
                     "-f", "lavfi", "-i", "sine=d=1", "-pix_fmt", "yuvj420p", "-b:a", "320k", src], check=True)
     to_reels_spec(src, dst)
     info = subprocess.run([ff, "-hide_banner", "-i", dst], capture_output=True, text=True).stderr
-    assert "yuv420p(tv" in info, info
+    assert "yuv420p" in info and "yuvj420p" not in info and "(pc" not in info, info
     assert "48000 Hz" in info, info
     head = open(dst, "rb").read()
     assert head.index(b"moov") < head.index(b"mdat"), "moov atom must come first"
+
+    # Silent source (no audio stream, like scenario videos) gets an AAC track of the same length.
+    silent = os.path.join(d, "silent.mp4")
+    subprocess.run([ff, "-v", "error", "-f", "lavfi", "-i", "testsrc=s=108x192:d=2:r=30", "-pix_fmt", "yuvj420p", silent],
+                   check=True)
+    to_reels_spec(silent, dst)
+    info = subprocess.run([ff, "-hide_banner", "-i", dst], capture_output=True, text=True).stderr
+    assert "Audio: aac" in info and "Duration: 00:00:02.0" in info, info
 
     try:
         to_reels_spec(os.path.join(d, "missing.mp4"), dst)

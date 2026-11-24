@@ -13,7 +13,10 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 def _credentials(env: dict, token_path: str) -> Credentials:
     creds = None
     if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        except ValueError:  # saved without refresh_token (or corrupt): log in again
+            creds = None
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
     if not creds or not creds.valid:
@@ -28,7 +31,9 @@ def _credentials(env: dict, token_path: str) -> Credentials:
             SCOPES,
         )
         # Fixed port: a "Web application" OAuth client only accepts redirect URIs registered in Cloud Console.
-        creds = flow.run_local_server(port=8765, open_browser=True, timeout_seconds=300)
+        # prompt=consent: Google only returns a refresh_token on consent; without it the saved token can't be reused.
+        creds = flow.run_local_server(port=8765, open_browser=True, timeout_seconds=300,
+                                      access_type="offline", prompt="consent")
         # Refresh token = channel access; keep it owner-only (mode is a no-op on Windows, enforced on macOS/Linux).
         fd = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as f:

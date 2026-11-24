@@ -3,6 +3,8 @@ dist
 .DS_Store
 .env
 .yt_token.json
+.threads_token.json
+.comment_state.json
 .venv
 __pycache__
 

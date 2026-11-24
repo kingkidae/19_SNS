@@ -26,8 +26,14 @@ MAX_BYTES = 300 * 1024 * 1024  # Reels limit
 
 def to_reels_spec(src: str, dst: str) -> None:
     """Re-encode to the Reels spec. Remotion's default output (yuvj420p, ~320k audio) fails with
-    rupload ProcessingFailedError; limited-range yuv420p, AAC 128k/48kHz and moov-first pass."""
-    cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-y", "-i", src,
+    rupload ProcessingFailedError; limited-range yuv420p, AAC 128k/48kHz and moov-first pass.
+    Video with no audio track (e.g. silent scenario videos) also fails, so a silent track is added."""
+    ff = imageio_ffmpeg.get_ffmpeg_exe()
+    probe = subprocess.run([ff, "-hide_banner", "-i", src], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace").stderr
+    audio = ["-map", "0:v:0", "-map", "0:a:0"] if "Audio:" in probe else \
+        ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-map", "0:v:0", "-map", "1:a:0", "-shortest"]
+    cmd = [ff, "-v", "error", "-y", "-i", src, *audio,
            "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p", "-color_range", "tv",
            "-g", "60", "-b:v", "8M", "-maxrate", "10M", "-bufsize", "16M",
            "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
@@ -68,9 +74,9 @@ def wait_until_finished(fetch_status, sleep=time.sleep, interval=10, timeout=600
         if code == "FINISHED":
             return
         if code in ("ERROR", "EXPIRED"):
-            raise RuntimeError(f"Instagram processing failed: {code} {s.get('status', '')}")
+            raise RuntimeError(f"processing failed: {code} {s.get('status', '')}")
         if waited >= timeout:
-            raise TimeoutError(f"Instagram processing still {code} after {timeout}s")
+            raise TimeoutError(f"processing still {code} after {timeout}s")
         log(f"processing: {code}")
         sleep(interval)
         waited += interval

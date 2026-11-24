@@ -13,22 +13,22 @@ import {
 import { HEAVY, THIN } from "./fonts";
 
 // Retro circus palette (ref: 산이 'Rap Circus' typo motion).
-const PLUM = "#2b1d33";
-const RED = "#c8323a";
-const CREAM = "#f3e6cc";
-const ORANGE = "#e8822a";
-const TEAL = "#7cc6c2";
+export const PLUM = "#2b1d33";
+export const RED = "#c8323a";
+export const CREAM = "#f3e6cc";
+export const ORANGE = "#e8822a";
+export const TEAL = "#7cc6c2";
 
 // Measured tempo of the clip: ~122 BPM, first beat at 0.45s.
 const BEAT = 0.49;
 const BEAT0 = 0.45;
 
 type Fx = "slam" | "slide" | "pop" | "rise" | "type";
-type El = {
+export type El = {
   text: string;
   t: number; // seconds into the clip (Whisper word stamps)
-  x: number;
-  y: number;
+  x?: number; // omitted = flows inline (flex layout)
+  y?: number;
   size: number;
   font: "heavy" | "thin" | "bold";
   color: string;
@@ -151,10 +151,10 @@ const SHOTS: Shot[] = [
   },
 ];
 
-const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const out = (e: (t: number) => number = Easing.cubic) => ({ ...clamp, easing: Easing.out(e) });
+export const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+export const out =(e: (t: number) => number = Easing.cubic) => ({ ...clamp, easing: Easing.out(e) });
 
-const Element: React.FC<{ el: El; at: number }> = ({ el, at }) => {
+export const Element: React.FC<{ el: El; at: number }> = ({ el, at }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const f = frame - at;
@@ -214,10 +214,10 @@ const Element: React.FC<{ el: El; at: number }> = ({ el, at }) => {
   return (
     <div
       style={{
-        position: "absolute",
+        position: el.x === undefined ? "relative" : "absolute",
         left: el.x,
         top: el.y,
-        translate: "-50% -50%",
+        translate: el.x === undefined ? undefined : "-50% -50%",
         overflow: el.fx === "rise" ? "hidden" : undefined,
         padding: el.box ? "24px 56px" : undefined,
       }}
@@ -237,7 +237,7 @@ const Element: React.FC<{ el: El; at: number }> = ({ el, at }) => {
   );
 };
 
-const Rings: React.FC = () => {
+export const Rings: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const rings: [number, string, boolean][] = [
@@ -256,8 +256,9 @@ const Rings: React.FC = () => {
           key={i}
           style={{
             position: "absolute",
-            left: 960 - d / 2,
-            top: 540 - d / 2,
+            // Centered in whatever box contains it (1920x1080 board or a vertical frame).
+            left: `calc(50% - ${d / 2}px)`,
+            top: `calc(50% - ${d / 2}px)`,
             width: d,
             height: d,
             borderRadius: "50%",
@@ -273,11 +274,16 @@ const Rings: React.FC = () => {
   );
 };
 
-const Rays: React.FC = () => {
+export const Rays: React.FC = () => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ rotate: `${frame * 0.15}deg`, opacity: 0.35 }}>
-      <svg width="1920" height="1080" viewBox="-960 -540 1920 1080" style={{ overflow: "visible" }}>
+      <svg
+        width="3000"
+        height="3000"
+        viewBox="-1500 -1500 3000 3000"
+        style={{ position: "absolute", left: "50%", top: "50%", translate: "-50% -50%" }}
+      >
         {new Array(36).fill(0).map((_, i) => {
           const a = (i / 36) * Math.PI * 2;
           return <line key={i} x1={0} y1={0} x2={Math.cos(a) * 2000} y2={Math.sin(a) * 2000} stroke={RED} strokeWidth={2} />;
@@ -287,7 +293,7 @@ const Rays: React.FC = () => {
   );
 };
 
-const Ghost: React.FC<{ text: string }> = ({ text }) => {
+export const Ghost: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ justifyContent: "center", gap: 0, opacity: 0.07 }}>
@@ -355,7 +361,7 @@ const ShotView: React.FC<{ shot: Shot; index: number }> = ({ shot, index }) => {
   );
 };
 
-const Grain: React.FC = () => {
+export const Grain: React.FC = () => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ mixBlendMode: "overlay", opacity: 0.3 }}>
@@ -369,7 +375,7 @@ const Grain: React.FC = () => {
   );
 };
 
-const Fades: React.FC = () => {
+export const Fades: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   return (
